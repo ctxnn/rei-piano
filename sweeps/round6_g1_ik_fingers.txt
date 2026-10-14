@@ -1,0 +1,17 @@
+# Round 6 (2026-10-12): G1 + IK hand-position control, hands hovering, and the wrist can no
+# longer push the hand into the keys (wrist range x +-3 cm, z +-3 cm).
+# History: rounds 2-4 had the fingertips resting ON the keys (piano 0.75 m) -> creep and
+# brushed keys. Round 5 (piano 0.70 m, wrist z +-12 cm) learned to "dab" with the whole hand:
+# lowering the wrist pressed 4-6 keys at once (571 presses for 44 strikes); stopped at ~1M.
+# Now, as on RoboPianist's sliders, only finger motion can press keys.
+# 8 runs from scratch, 4M steps. Judge by note F1.
+#
+# name                 extra arguments
+r6_fingers_s0          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0
+r6_fingers_s1          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1
+r6_fingers_s2          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 2
+r6_fingers_f_s0        --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5
+r6_fingers_f_s1        --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1 --env.arm-action-smoothing 0.5
+r6_fingers_p_s0        --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.extra-press-penalty 0.5
+r6_fingers_p_s1        --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1 --env.extra-press-penalty 0.5
+r6_fingers_fp_s0       --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5 --env.extra-press-penalty 0.5

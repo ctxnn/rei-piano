@@ -1,0 +1,15 @@
+# Round 1 (2026-10-12): 8 runs on one 8xH100 node, 3M env steps each.
+# Question: which discount works for a 60 s song, and how much do seeds vary?
+# Shared settings come from COMMON_ARGS in the launch command (see docs/04_training.md).
+#
+# name               extra arguments
+r1_g084_s0           --sac.discount 0.84 --seed 0
+r1_g088_s0           --sac.discount 0.88 --seed 0
+r1_g092_s0           --sac.discount 0.92 --seed 0
+r1_g084_s1           --sac.discount 0.84 --seed 1
+r1_g088_s1           --sac.discount 0.88 --seed 1
+r1_g092_s1           --sac.discount 0.92 --seed 1
+# The shorter 45 s clip: does a shorter song learn faster?
+r1_g088_45s_s0       --sac.discount 0.88 --seed 0 --env.midi-path data/midi/runaway_45s.mid
+# A 4x larger batch with 4x fewer updates: same gradient samples, fewer GPU launches.
+r1_g088_b1024_s0     --sac.discount 0.88 --seed 0 --sac.batch-size 1024 --updates-per-env-step 0.25

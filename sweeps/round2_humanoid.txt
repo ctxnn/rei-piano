@@ -1,0 +1,15 @@
+# Round 2 (2026-10-12): the Unitree G1 humanoid plays, 8 runs on one 8xH100 node.
+# The policy now drives 4 arm joints per side (shoulder x3, elbow) instead of RoboPianist's
+# invisible forearm sliders, plus the Shadow Hand fingers (43 actions total).
+# Round 1 (hands on sliders) reached F1 0.99-1.00 by 1M steps with every setting, so we
+# keep its settings and spend most runs on seeds: arm control is the new difficulty.
+#
+# name                 extra arguments
+r2_g1_g088_s0          --env.embodiment g1 --sac.discount 0.88 --seed 0
+r2_g1_g088_s1          --env.embodiment g1 --sac.discount 0.88 --seed 1
+r2_g1_g088_s2          --env.embodiment g1 --sac.discount 0.88 --seed 2
+r2_g1_g092_s0          --env.embodiment g1 --sac.discount 0.92 --seed 0
+r2_g1_g092_s1          --env.embodiment g1 --sac.discount 0.92 --seed 1
+r2_g1_g092_s2          --env.embodiment g1 --sac.discount 0.92 --seed 2
+r2_g1_g084_s0          --env.embodiment g1 --sac.discount 0.84 --seed 0
+r2_g1_g088_b1024_s0    --env.embodiment g1 --sac.discount 0.88 --seed 0 --sac.batch-size 1024 --updates-per-env-step 0.25

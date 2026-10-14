@@ -1,0 +1,18 @@
+# Round 3 (2026-10-12): fix the G1's jitter. 8 runs on one 8xH100 node, 3M steps each.
+# Round 2's G1 reached the notes but made 225-366 key presses for 44 strikes (note F1 <= 0.27).
+# Warm start from the two best round-2 checkpoints (6M steps) and add, per variant:
+#   A  extra-press penalty 0.5
+#   B  extra-press penalty 2.0
+#   C  A + arm command low-pass filter 0.5 + arm action-rate penalty 1.0
+#   D  B + arm command low-pass filter 0.5 + arm action-rate penalty 5.0
+# Judge by note F1 (eval/note_f1), not per-step F1.
+#
+# name              extra arguments
+r3_g088_A           --env.embodiment g1 --sac.discount 0.88 --seed 10 --init-from runs/r2_g1_g088_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 0.5
+r3_g088_B           --env.embodiment g1 --sac.discount 0.88 --seed 11 --init-from runs/r2_g1_g088_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 2.0
+r3_g088_C           --env.embodiment g1 --sac.discount 0.88 --seed 12 --init-from runs/r2_g1_g088_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 0.5 --env.arm-action-smoothing 0.5 --env.arm-action-rate-penalty 1.0
+r3_g088_D           --env.embodiment g1 --sac.discount 0.88 --seed 13 --init-from runs/r2_g1_g088_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 2.0 --env.arm-action-smoothing 0.5 --env.arm-action-rate-penalty 5.0
+r3_g084_A           --env.embodiment g1 --sac.discount 0.84 --seed 20 --init-from runs/r2_g1_g084_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 0.5
+r3_g084_B           --env.embodiment g1 --sac.discount 0.84 --seed 21 --init-from runs/r2_g1_g084_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 2.0
+r3_g084_C           --env.embodiment g1 --sac.discount 0.84 --seed 22 --init-from runs/r2_g1_g084_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 0.5 --env.arm-action-smoothing 0.5 --env.arm-action-rate-penalty 1.0
+r3_g084_D           --env.embodiment g1 --sac.discount 0.84 --seed 23 --init-from runs/r2_g1_g084_s0/checkpoints/agent_latest.msgpack --env.extra-press-penalty 2.0 --env.arm-action-smoothing 0.5 --env.arm-action-rate-penalty 5.0

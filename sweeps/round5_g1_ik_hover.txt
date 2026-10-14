@@ -1,0 +1,15 @@
+# Round 5 (2026-10-12): G1 + IK hand-position control + the hands hovering above the keys.
+# Root cause of rounds 2-4: with the piano at 0.75 m the neutral pose put the fingertips ON
+# the keys (1-10 mm above), resting fingers crept sideways ~6 mm and brushed keys. At 0.70 m
+# they hover 40-50 mm above (like RoboPianist's 37-46 mm) and the creep is gone (0.2 mm).
+# 8 runs from scratch, 4M steps. Judge by note F1.
+#
+# name                 extra arguments
+r5_hover_s0            --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0
+r5_hover_s1            --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1
+r5_hover_s2            --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 2
+r5_hover_f_s0          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5
+r5_hover_f_s1          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1 --env.arm-action-smoothing 0.5
+r5_hover_p_s0          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.extra-press-penalty 0.5
+r5_hover_p_s1          --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1 --env.extra-press-penalty 0.5
+r5_hover_fp_s0         --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5 --env.extra-press-penalty 0.5

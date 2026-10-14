@@ -1,0 +1,16 @@
+# Round 4 (2026-10-12): G1 with hand-position (IK) control, trained from scratch.
+# 8 runs on one 8xH100 node, 4M steps each. The policy sets each wrist's position
+# (along the keys +-30 cm, toward/away +-8 cm, up/down +-8 cm); IK moves the shoulders and
+# elbows. This is the slider-like control that made the hands perfect, carried by real arms.
+# Variants: filter = low-pass on the wrist targets (0.5); press = extra-press penalty (0.5).
+# Judge by note F1.
+#
+# name              extra arguments
+r4_ik_s0            --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 0
+r4_ik_s1            --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 1
+r4_ik_f_s0          --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5
+r4_ik_f_s1          --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 1 --env.arm-action-smoothing 0.5
+r4_ik_fp_s0         --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5 --env.extra-press-penalty 0.5
+r4_ik_fp_s1         --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 1 --env.arm-action-smoothing 0.5 --env.extra-press-penalty 0.5
+r4_ik_fp_s2         --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 2 --env.arm-action-smoothing 0.5 --env.extra-press-penalty 0.5
+r4_ik_p_s0          --env.embodiment g1 --env.arm-control ik --sac.discount 0.88 --seed 0 --env.extra-press-penalty 0.5

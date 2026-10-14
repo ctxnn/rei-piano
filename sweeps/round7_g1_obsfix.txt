@@ -1,0 +1,18 @@
+# Round 7 (2026-10-12): the G1 can finally *see its fingers*.
+# Bug found after round 6: the Shadow Hands were attached to the G1 with a raw MJCF
+# site.attach instead of composer's Entity.attach, so the hands' observables (finger joint
+# angles) never reached the policy (observation: 1,076 = goal + piano + 8 arm joints; now
+# 1,118 with 2 x 21 finger joints). Every G1 round (2-6) was affected.
+# Setup otherwise as round 6: piano 0.70 m (hands hover), IK wrist range x/z +-3 cm (fingers
+# must do the pressing). Plus 3 runs with joint-angle arm control (+-0.4 rad) for the
+# joint-vs-IK comparison. 4M steps from scratch. Judge by note F1.
+#
+# name                 extra arguments
+r7_ik_s0               --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0
+r7_ik_s1               --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 1
+r7_ik_s2               --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 2
+r7_ik_f_s0             --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.arm-action-smoothing 0.5
+r7_ik_p_s0             --env.embodiment g1 --env.arm-control ik --env.piano-height 0.70 --sac.discount 0.88 --seed 0 --env.extra-press-penalty 0.5
+r7_joint_s0            --env.embodiment g1 --env.arm-control joint --env.piano-height 0.70 --sac.discount 0.88 --seed 0
+r7_joint_s1            --env.embodiment g1 --env.arm-control joint --env.piano-height 0.70 --sac.discount 0.88 --seed 1
+r7_joint_s2            --env.embodiment g1 --env.arm-control joint --env.piano-height 0.70 --sac.discount 0.88 --seed 2

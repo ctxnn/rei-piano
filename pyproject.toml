@@ -1,0 +1,42 @@
+[project]
+name = "runaway"
+version = "0.1.0"
+description = "Reinforcement learning: robot hands (and a humanoid) learn to play the opening of Kanye West's Runaway in MuJoCo."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    # Simulation: MuJoCo + the RoboPianist piano/hand models and task code.
+    "robopianist==1.0.10",
+    "mujoco>=3.1.1",
+    "dm_control>=1.0.16",
+    "numpy<2.5",  # dm_control 1.0.x still sets array.shape, which numpy 2.5 deprecates.
+    "scipy",  # linear_sum_assignment for the automatic fingering reward.
+    # Learning.
+    "jax>=0.4.30",
+    "flax>=0.10",
+    "optax",
+    # Utilities.
+    "pretty_midi",
+    "tyro",
+    "tqdm",
+    "imageio",
+    "imageio-ffmpeg",
+]
+
+[project.optional-dependencies]
+# On an NVIDIA machine: `uv pip install -e ".[cuda]"`.
+cuda = ["jax[cuda12]>=0.4.30"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+runaway = ["dashboard/*.html"]
+
+[tool.ruff]
+line-length = 100
