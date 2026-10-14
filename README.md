@@ -206,7 +206,7 @@ Every equation in the project, with its code location: [docs/07_math.md](docs/07
 
 | | |
 |---|---|
-| Hardware | SF Compute: one 8×H100 node, 8 runs in parallel (one per GPU, 28 CPU threads each) |
+| Hardware | one rented 8×H100 machine, 8 runs in parallel (one per GPU, 28 CPU threads each) |
 | Throughput | ~1,300–1,600 environment steps/s per run |
 | Hands (phase 1) | solved in ~1M steps, about 12 minutes |
 | G1 (phase 2) | 4M steps in ~0.9 h per run |
@@ -215,7 +215,7 @@ Every equation in the project, with its code location: [docs/07_math.md](docs/07
 The fixes that mattered most were one math-library thread per simulator process (2×
 faster simulation), a NumPy F1 metric instead of scikit-learn (−42% simulation time), a CPU
 copy of the actor for acting, and pinning each run to its own CPU block. Details:
-[docs/04_training.md](docs/04_training.md) and [docs/05_sf_compute.md](docs/05_sf_compute.md).
+[docs/04_training.md](docs/04_training.md).
 
 ## Quickstart
 
@@ -243,7 +243,13 @@ bash scripts/get_g1.sh                       # Unitree G1 model (MuJoCo Menageri
 python3 -m http.server 8000 --directory outputs/dashboard_site
 ```
 
-Running 8 runs at once on a rented 8×H100 node: [docs/05_sf_compute.md](docs/05_sf_compute.md).
+Several runs at once on a multi-GPU Linux machine (one run per GPU, plus a live dashboard):
+
+```bash
+bash scripts/setup_gpu_machine.sh
+COMMON_ARGS="--num-envs 20" bash scripts/launch_runs.sh sweeps/round7_g1_obsfix.txt
+```
+
 Every round's exact settings are in [`sweeps/`](sweeps/).
 
 ## Repository map
@@ -259,7 +265,7 @@ src/runaway/
   evaluate.py      record a performance; per-step and note-level scores
   render.py        recording → video with the robot's own piano audio
   dashboard/       live + replayable training dashboard (build.py, app.html)
-scripts/           MIDI, transcription, node setup, launching runs, syncing, benchmarks
+scripts/           MIDI, transcription, GPU machine setup, launching runs, benchmarks
 sweeps/            one file per training round: run names + settings
 tests/             metric, actor and observation tests
 docs/              everything needed to understand and reproduce this
@@ -272,17 +278,15 @@ assets/            images for this README
 2. [Song transcription](docs/02_song_transcription.md): how the notes were found, with evidence
 3. [Environment](docs/03_environment.md): what the robot sees, does and is rewarded for
 4. [Training](docs/04_training.md): SAC, the fast training loop, all settings
-5. [SF Compute](docs/05_sf_compute.md): running on H100s: commands, prices, gotchas
-6. [Results](docs/06_results.md): every training round, including the failures
-7. [Math](docs/07_math.md): every equation (MDP, reward, OT fingering, F1, SAC, IK)
+5. [Results](docs/06_results.md): every training round, including the failures
+6. [Math](docs/07_math.md): every equation (MDP, reward, OT fingering, F1, SAC, IK)
 
 ## Credits
 
 [RoboPianist](https://github.com/google-research/robopianist) (Zakka et al., 2023) for the
 piano, hands and task; RP1M (Zhao et al., 2024) for the optimal-transport fingering reward;
 [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie) for the Shadow Hand
-and Unitree G1 models; the humanoid-pianist project by anandmaj for the inspiration;
-[SF Compute](https://sfcompute.com) for the H100s.
+and Unitree G1 models; the humanoid-pianist project by anandmaj for the inspiration.
 
 "Runaway" © Kanye West / Roc-A-Fella / Def Jam. No audio from the recording is included in
 this repository.

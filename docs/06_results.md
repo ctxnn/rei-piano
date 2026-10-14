@@ -37,11 +37,11 @@ Two scores, both from one deterministic performance of the whole clip:
 | r2_g1_g092_s2 | **0.210** | 5,500,000 | 366 / 44 | 0.779 | 0.790 |
 
 The tables below give the per-step numbers as originally logged. Evaluations every
-100k env steps. Raw data: `s3://runaway-piano/round1/runs.tar` (org storage bucket).
+100k env steps.
 
 ## Round 1: Shadow Hands on sliders (RoboPianist setup), 60 s clip
 
-8 runs on one 8×H100 node (`piano-r1`), 20 simulators per run, ~1,500 env steps/s per run.
+8 runs on one 8×H100 node, 20 simulators per run, ~1,500 env steps/s per run.
 Stopped at ~1.25M steps (≈ 14 min) because every run had converged. Cost ≈ $25.
 
 | run | discount | seed | variant | best eval F1 | at step | first ≥ 0.95 | first ≥ 0.99 | final eval F1 | steps trained |
@@ -75,8 +75,7 @@ Stopped at ~1.25M steps (≈ 14 min) because every run had converged. Cost ≈ $
 checkpoints to **6M steps** (another ≈ 40 min; ~1,350 env steps/s per run). The arm joints
 replace the sliders, so the policy has to learn to swing the arms to carry the hands.
 First attempt (arm range ±1.2 rad) learned nothing in 300k steps; with ±0.4 rad and the
-piano at 0.75 m every run learns. Raw data:
-`s3://runaway-piano/round2/runs.tar` (includes the failed first attempt).
+piano at 0.75 m every run learns.
 
 | run | discount | seed | best F1 by 3M | best F1 by 6M | at step | precision / recall at best | first ≥ 0.80 | F1 @ 6M |
 |---|---|---|---|---|---|---|---|---|
@@ -156,7 +155,6 @@ new environment): the arm filter alone cuts presses from 272 to 188 for 44 strik
   candidates (TODO.md §1): hand-position commands through IK (slider-like control with real
   arms), or training from scratch with the filter + mild penalty on from the start.
 
-Round 3 data is on `piano-r1`'s disk (`~/runaway/runs/r3_*`), not yet in the bucket.
 
 ## Round 4: G1 with hand-position (IK) control, from scratch (worse)
 
@@ -255,15 +253,13 @@ What it means:
 * **Evaluations are noisy** between checkpoints (the best run: 0.905 at 3.6M, 0.724 at 4M).
   Keep the best checkpoint by note F1, not the last one. Several runs were still improving
   at 4M; longer training would likely help.
-* Video: `outputs/showcase/g1_3.6M_noteF1_0.91*.mp4` (also `s3://runaway-piano/showcase/`).
-* Raw data for rounds 3–7: `s3://runaway-piano/round3-7/runs.tar` (3.8 GB).
+* Video: `assets/g1_hero.gif` and `assets/g1_progression.gif` (excerpts).
 
 ## Cost summary (2026-10-12)
 
 | Item | Time | Cost |
 |---|---|---|
-| 1×H100 benchmark node | 41 min | $2.8 |
-| 8×H100 node: round 1 + round 2 (6M) + wakes | ~2 h | ~$75 |
-| 8×H100 node: rounds 3–7 + wakes | | ~$133 |
-| Storage (≈ 6.3 GB in bucket) | | |
-| **Total** (per `autor billing`) | | **$218.37** |
+| 1×H100 benchmark machine | 41 min | $2.8 |
+| 8×H100 machine: round 1 + round 2 (6M) | ~2 h | ~$75 |
+| 8×H100 machine: rounds 3–7 | | ~$133 |
+| **Total** | | **≈ $218** |

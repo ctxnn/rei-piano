@@ -74,7 +74,7 @@ between strikes "no key down" is correct. Anything meaningfully above 0.2 is rea
 ## Speed notes
 
 * One environment steps at ~830 steps/s on an Apple M5 core and ~260–290 on a Xeon
-  8480+ core (SF Compute H100 nodes).
+  8480+ core (a cloud H100 node).
 * RoboPianist's evaluation wrapper computed F1 with scikit-learn, once per step at the end
   of every episode: 42% of all simulation time. `FastMidiEvaluationWrapper` does the same
   computation in NumPy (identical results, `tests/test_metrics.py`).

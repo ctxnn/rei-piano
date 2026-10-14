@@ -74,9 +74,9 @@ class VecEnv:
         ctx = mp.get_context("spawn")  # "fork" + MuJoCo/JAX threads is not safe.
         # Each worker must be single-threaded: we parallelise across processes. Thread
         # pools inherit their size from these variables when NumPy is first imported,
-        # so they must be in the environment *before* the workers start. (SF Compute
-        # nodes preset them to the whole CPU budget; with 12 workers x 14 threads the
-        # node thrashed and ran 2x slower.)
+        # so they must be in the environment *before* the workers start. (Some cloud
+        # images preset them to the whole CPU budget; with 12 workers x 14 threads the
+        # machine thrashed and ran 2x slower.)
         for var in _THREAD_ENV_VARS:
             os.environ[var] = "1"
         self.num_envs = num_envs

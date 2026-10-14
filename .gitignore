@@ -8,8 +8,7 @@ __pycache__/
 # Copyrighted audio stays local (the user's own copy).
 data/audio/
 
-# Large / regenerable artifacts. Training runs live on SF Compute nodes and in the
-# org storage bucket "runaway-piano"; only selected showcase videos come back here.
+# Large / regenerable artifacts: training runs, videos, dashboard builds.
 outputs/
 runs/
 

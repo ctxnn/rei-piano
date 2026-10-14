@@ -28,7 +28,7 @@ Code: [`src/runaway/sac.py`](../src/runaway/sac.py) (agent),
                                      copy into the GPU replay buffer ─▶ 1M-transition buffer
 ```
 
-Measured on SF Compute (one loop iteration, 20 environments, H100 + 28 CPU threads):
+Measured on a cloud H100 node (one loop iteration, 20 environments, H100 + 28 CPU threads):
 act 3.0 ms · launch updates 1.8 ms · simulate 7.2 ms · store 0.3 ms → **~1,600 env steps/s
 per run**. 3M steps ≈ 32 min.
 
@@ -50,14 +50,12 @@ Locally (CPU, slow but fine for a smoke test):
 .venv/bin/python -m runaway.train --run-name smoke --num-envs 8 --total-env-steps 20000
 ```
 
-On an SF Compute 8×H100 node, 8 runs at once:
+On a Linux machine with several GPUs (we used 8×H100), one run per GPU:
 
 ```bash
-bash scripts/push_code.sh piano-r1
-autor run piano-r1 -d -- bash -c 'cd ~/runaway && bash scripts/node_setup.sh'
-autor run piano-r1 -d --env COMMON_ARGS="--total-env-steps 3000000 --eval-every 100000 --num-envs 20" \
-  -- bash -c 'cd ~/runaway && bash scripts/launch_runs.sh sweeps/round1.txt'
-autor api post /nodes/piano-r1/endpoints --data '{"port": 8000}'   # live dashboard URL
+bash scripts/setup_gpu_machine.sh                  # apt packages, G1 model, Python venv
+COMMON_ARGS="--total-env-steps 3000000 --eval-every 100000 --num-envs 20" \
+  bash scripts/launch_runs.sh sweeps/round1.txt    # + live dashboard on port 8000
 ```
 
 ## All settings (defaults in code)

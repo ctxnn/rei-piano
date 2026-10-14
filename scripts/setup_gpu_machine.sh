@@ -1,12 +1,9 @@
 #!/bin/bash
-# Set up (or re-set up after a wake) an Autoresearch H100 node for training.
+# Set up a Linux GPU machine (Ubuntu + CUDA 12, with uv installed) for training.
 #
-# Run on the node from the project directory:   bash scripts/node_setup.sh
+# Run on the machine from the project directory:   bash scripts/setup_gpu_machine.sh
 #
-# Node image: jax-0.11-cuda12.9 (Ubuntu 24.04, CUDA 12.9, uv preinstalled).
-# Only /home/dev survives a node stop, so:
-#   * system packages (apt) are reinstalled on every wake (fast, ~20 s)
-#   * the Python venv lives in the project dir on the persistent disk (kept)
+# Safe to re-run: system packages are (re)installed, the Python venv in .venv is kept.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -31,5 +28,5 @@ VIRTUAL_ENV=.venv uv pip install -q -e ".[cuda]" soundfile
 .venv/bin/python - <<'EOF'
 import os, jax
 print("jax", jax.__version__, "devices:", jax.devices())
-print("CPU budget (GMN_CPU_LIMIT):", os.environ.get("GMN_CPU_LIMIT"), " os.cpu_count():", os.cpu_count())
+print("os.cpu_count():", os.cpu_count())
 EOF

@@ -10,7 +10,7 @@
 # Blank lines and lines starting with # are ignored. Run i gets GPU i.
 #
 # Every run writes to runs/<name>/ and logs to runs/<name>/train.log. The dashboard
-# rebuilds every 60 s and serves on port 8000 (expose it with `autor` from outside).
+# rebuilds every 60 s and serves on port 8000.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SWEEP="$1"
@@ -41,8 +41,9 @@ while read -r name args; do
   i=$(( i + 1 ))
 done < "$SWEEP"
 
-# Live dashboard on the node: curves and piano rolls (videos are rendered off-node,
-# see scripts/sync_dashboard.sh, because software OpenGL takes ~6 min per video).
+# Live dashboard on the machine: curves and piano rolls. Videos are left out here
+# (software OpenGL takes ~6 min per video); build them later with
+# `python -m runaway.dashboard.build` on a machine with a display/GPU.
 MUJOCO_GL=osmesa PYOPENGL_PLATFORM=osmesa nohup nice -n 15 .venv/bin/python -m runaway.dashboard.build \
   --runs runs --out dashboard_site --watch --interval 60 --serve --port 8000 --no-videos \
   > dashboard.log 2>&1 &

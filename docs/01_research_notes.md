@@ -100,8 +100,8 @@ Paper: <https://arxiv.org/abs/2603.12243>
 | RoboPianist on CPU MuJoCo (chosen first) | exact published env, known to work | ~300–800 steps/s per CPU core |
 | MJX (MuJoCo on GPU, JAX) | 100k+ steps/s | contact-heavy scene is slow; RP1M's PPO underperformed |
 | MuJoCo Warp / MuJoCo Playground | modern GPU MuJoCo, better contacts | no piano env exists yet: needs a port |
-| ManiSkill / Genesis | GPU parallel | different models; rendering needs GPU graphics on SF Compute |
-| Isaac Sim | — | does not run on H100 (no RT cores), per SF Compute docs |
+| ManiSkill / Genesis | GPU parallel | different models; rendering needs GPU graphics on the training machine |
+| Isaac Sim | — | does not run on H100 (no RT cores) |
 
 ## Decisions this led to
 

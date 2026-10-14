@@ -34,7 +34,6 @@ Each with ≥ 3 seeds per setting; one 8-run sweep on an 8×H100 node ≈ $25.
 
 ## 4. Engineering nice-to-haves
 - [ ] GPU-parallel simulation (MuJoCo Warp / MJX) + FastSAC: from ~1.5k to ~100k steps/s.
-- [ ] Ask SF Compute for "GPU graphics" so videos render on the node (EGL) instead of the Mac.
-- [ ] Make `sync_dashboard.sh` incremental (only pull new evals).
+- [ ] Render videos on the training GPU (EGL) instead of software OpenGL or a laptop.
 - [ ] Unit test for `humanoid.py` mount geometry (hands point at the keys, palms down).
 - [ ] Better piano soundfont for the videos (Salamander Grand, 1.3 GB, optional).

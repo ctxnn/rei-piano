@@ -31,7 +31,7 @@ import os
 
 # One thread per process for NumPy's math libraries. Must be set before NumPy is
 # imported. The simulator workers already use all the other cores; extra BLAS threads
-# here would only fight them. (SF Compute presets these to the whole CPU budget.)
+# here would only fight them. (Some cloud images preset these to the whole CPU budget.)
 for _var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
     os.environ[_var] = "1"
 
