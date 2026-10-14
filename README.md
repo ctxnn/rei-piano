@@ -9,6 +9,9 @@ with reinforcement learning.**
 
 <sub>The best policy after 3.6M steps: 43 of 44 notes on time (note F1 0.905). MuJoCo + RoboPianist + SAC in JAX.</sub>
 
+**[Training dashboard](https://ctxnn.github.io/rei-piano/)**: every run's curves, piano rolls and videos, with a replay of training ·
+**[Trained policies](https://huggingface.co/ctxnn1/rei-piano)** on Hugging Face.
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-black.svg)
 ![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-black.svg)
@@ -241,6 +244,13 @@ bash scripts/get_g1.sh                       # Unitree G1 model (MuJoCo Menageri
 # Build the training dashboard (curves, piano rolls, videos, replay) and open it
 .venv/bin/python -m runaway.dashboard.build --runs runs --out outputs/dashboard_site
 python3 -m http.server 8000 --directory outputs/dashboard_site
+```
+
+Play a trained policy without training ([weights on Hugging Face](https://huggingface.co/ctxnn1/rei-piano)):
+
+```bash
+hf download ctxnn1/rei-piano --local-dir pretrained
+.venv/bin/python pretrained/play_pretrained.py pretrained/g1_humanoid   # note F1 0.905
 ```
 
 Several runs at once on a multi-GPU Linux machine (one run per GPU, plus a live dashboard):
