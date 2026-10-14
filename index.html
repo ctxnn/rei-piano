@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Runaway Training Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a black-and-white instrument panel, like the keyboard itself. Colour is kept for
+   data only: blue = notes the song wants, green = played right, orange = wrong key.
+   Summary line, then runs grouped by round, then the selected performance (left) and its
+   curves (right); the replay bar is pinned to the bottom. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --ink: #121417;
+  --muted: #646a73;
+  --faint: #9ba1aa;
+  --line: #e4e6e9;
+  --ghost: #cfd3d8;      /* the other runs in a chart */
+  --target: #3b6fe0;     /* keys the song wants (blue in the videos too) */
+  --played: #1f9d55;     /* keys pressed correctly (green in the videos) */
+  --wrong: #e5602d;      /* keys pressed that should not be */
+  --key-white: #ffffff;
+  --key-black: #1d2025;
+  --video-bg: #000000;
+  --font: "Geist", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0e10; --surface: #15171a; --ink: #eceef1; --muted: #8d939c; --faint: #636973;
+    --line: #23262b; --ghost: #363b42; --target: #7aa0ff; --played: #4cc983; --wrong: #ff8a5c;
+    --key-white: #d8dbe0; --key-black: #0a0b0d; --video-bg: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0e10; --surface: #15171a; --ink: #eceef1; --muted: #8d939c; --faint: #636973;
+  --line: #23262b; --ghost: #363b42; --target: #7aa0ff; --played: #4cc983; --wrong: #ff8a5c;
+  --key-white: #d8dbe0; --key-black: #0a0b0d; --video-bg: #000000;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1280px; margin: 0 auto; padding-inline: 24px; padding-block: 32px 104px; display: grid; gap: 32px; }
+@media (max-width: 560px) { .wrap { padding-inline: 16px; padding-block: 20px 96px; gap: 24px; } }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+h2 { font-size: 13px; font-weight: 500; }
+.label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+
+/* Header + summary */
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.title { display: grid; gap: 4px; min-width: 0; }
+.title p { margin: 0; color: var(--muted); max-width: 62ch; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.tabs { display: inline-flex; padding: 3px; gap: 2px; background: var(--line); border-radius: 8px; }
+.tabs button { padding: 5px 14px; font-size: 13px; color: var(--muted); border-radius: 6px; }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.theme { display: inline-flex; padding: 3px; gap: 2px; background: var(--line); border-radius: 8px; }
+.theme button { padding: 4px 10px; font-size: 12px; color: var(--muted); border-radius: 6px; }
+.theme button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); display: inline-block; flex: none; }
+.dot.live, .dot.training { background: var(--played); animation: pulse 1.6s ease-in-out infinite; }
+.dot.finished { background: var(--ink); }
+.dot.stopped { background: var(--wrong); }
+.dot.halted { background: var(--faint); }   /* stopped on purpose (see STOPPED) */
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
+
+.summary { display: flex; flex-wrap: wrap; gap: 12px 40px; padding-block: 18px; border-block: 1px solid var(--line); }
+.stat { display: grid; gap: 2px; text-align: left; }
+.stat b { font-family: var(--mono); font-weight: 500; font-size: 26px; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat small { color: var(--muted); font-size: 12px; }
+button.stat:hover b { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+/* Runs, grouped by round */
+.rounds { display: grid; gap: 4px; }
+.round > summary { list-style: none; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: baseline; gap: 10px;
+  padding: 10px 2px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.round > summary::-webkit-details-marker { display: none; }
+.round > summary::before { content: "›"; color: var(--faint); transition: transform .15s; display: inline-block; }
+.round[open] > summary::before { transform: rotate(90deg); }
+.round-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.round-name span { color: var(--muted); font-weight: 400; }
+.round-best { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.round-best b { color: var(--ink); font-weight: 500; }
+.runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr)); column-gap: 40px; padding-block: 4px 12px; }
+.run { display: grid; grid-template-columns: minmax(0, 1fr) 72px 78px 64px; align-items: center; gap: 14px;
+  padding: 8px 10px; border-radius: 6px; text-align: left; width: 100%; }
+.run:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.run[aria-pressed="true"] { background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.run-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.run-name small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.run[aria-pressed="true"] .run-name { font-weight: 600; }
+.bar { height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--faint); }
+.run .f1 { text-align: right; font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; }
+.run .f1 small { display: block; font-size: 10px; color: var(--faint); }
+.run .state { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) { .run { grid-template-columns: minmax(0, 1fr) 56px; } .run .bar, .run .state { display: none; } }
+
+/* Performance + curves */
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 960px) { main { grid-template-columns: minmax(0, 1fr); } }
+.col { display: grid; gap: 16px; min-width: 0; align-content: start; }
+.row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; }
+.perf-head h2 { font-size: 15px; font-weight: 600; }
+video { width: 100%; aspect-ratio: 16 / 9; background: var(--video-bg); border-radius: 6px; display: block; max-width: 100%; }
+.novideo { aspect-ratio: 16 / 9; max-width: 100%; display: grid; place-items: center; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; color: var(--muted); padding: 16px; text-align: center; }
+.scores { display: flex; flex-wrap: wrap; gap: 12px 36px; }
+.scores div { display: grid; gap: 1px; }
+.scores span:first-child { font-size: 11px; color: var(--muted); }
+.scores span:last-child { font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.scores div:first-child span:last-child { font-size: 26px; letter-spacing: -0.02em; line-height: 1.2; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.roll-wrap { overflow-x: auto; }
+canvas.roll { width: 100%; height: 170px; display: block; min-width: 480px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 4px; border-radius: 2px; display: inline-block; }
+
+/* Evaluation strip: one bar per evaluation, height = note F1. */
+.strip { display: grid; gap: 6px; }
+.strip-bars { display: flex; align-items: flex-end; gap: 2px; height: 56px; border-bottom: 1px solid var(--line); }
+.strip-bars button { flex: 1 1 0; min-width: 3px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 2px 2px 0 0; }
+.strip-bars button i { display: block; background: var(--ghost); border-radius: 2px 2px 0 0; min-height: 1px; }
+.strip-bars button.video i { background: color-mix(in srgb, var(--ink) 35%, var(--ghost)); }
+.strip-bars button:hover i { background: var(--muted); }
+.strip-bars button[aria-pressed="true"] i { background: var(--ink); }
+.strip-axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+
+.chart { display: grid; gap: 6px; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.chart-head small { color: var(--faint); font-size: 11px; }
+.chart .box { position: relative; height: 130px; min-width: 0; }
+.chart.lead .box { height: 210px; }
+.chart.lead h2 { font-size: 15px; font-weight: 600; }
+.curves { display: grid; gap: 28px; }
+.curves-sub { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 24px; }
+details.more-box { border-top: 1px solid var(--line); padding-top: 12px; }
+details.more-box > summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.more { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 24px; margin-top: 16px; }
+.empty { color: var(--muted); padding: 16px 4px; }
+
+/* Replay bar */
+.timeline { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line);
+  padding: 10px 24px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.timeline-inner { max-width: 1232px; margin: 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 16px; align-items: center; }
+.tl-play { font-size: 13px; font-weight: 500; white-space: nowrap; padding: 6px 14px; border-radius: 999px; background: var(--ink); color: var(--bg); }
+.timeline input { width: 100%; accent-color: var(--ink); }
+.tl-text { font-size: 12px; color: var(--muted); white-space: nowrap; min-width: 9ch; text-align: right; }
+.tl-latest { font-size: 12px; color: var(--muted); padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; }
+.tl-latest:hover { color: var(--ink); }
+@media (max-width: 640px) { .timeline { padding-inline: 16px; } .timeline-inner { grid-template-columns: auto minmax(0, 1fr) auto; } .tl-text { display: none; } }
+footer { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 4px; }
+footer b { color: var(--ink); font-weight: 500; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1>Runaway Training Room</h1>
+      <p>Simulated robots learning the first 60 seconds of Kanye West's “Runaway” with reinforcement learning.</p>
+    </div>
+    <div class="controls">
+      <nav class="tabs" aria-label="Which robot">
+        <button type="button" id="tab-g1" data-group="g1">G1 humanoid</button>
+        <button type="button" id="tab-hands" data-group="hands">Hands only</button>
+      </nav>
+      <nav class="theme" aria-label="Colour theme">
+        <button type="button" id="theme-system" data-theme-choice="system">Auto</button>
+        <button type="button" id="theme-light" data-theme-choice="light">Light</button>
+        <button type="button" id="theme-dark" data-theme-choice="dark">Dark</button>
+      </nav>
+      <div class="status"><span id="modeDot" class="dot"></span><span id="modeText">loading</span></div>
+    </div>
+  </header>
+
+  <section class="summary" id="summary" aria-label="Summary"></section>
+
+  <section class="rounds" id="runs" aria-label="Training runs"><div class="empty">Loading runs…</div></section>
+
+  <main>
+    <section class="col" aria-label="Performance">
+      <div class="row perf-head"><h2 id="perfTitle">Performance</h2><span class="muted num" id="perfStep"></span></div>
+      <div id="videoBox"><div class="novideo">Pick a run to see how it plays.</div></div>
+      <div class="scores" id="scores"></div>
+      <div class="panel">
+        <div class="row">
+          <span class="label">Piano roll</span>
+          <div class="legend">
+            <span><i style="background: color-mix(in srgb, var(--target) 35%, transparent)"></i>song</span>
+            <span><i style="background: var(--played)"></i>played right</span>
+            <span><i style="background: var(--wrong)"></i>wrong key</span>
+          </div>
+        </div>
+        <div class="roll-wrap"><canvas class="roll" id="roll" aria-label="Piano roll of the selected performance"></canvas></div>
+      </div>
+      <div class="strip">
+        <div class="row"><span class="label">Evaluations</span><span class="muted" style="font-size:11px">bar height = note F1 · highlighted bars have video</span></div>
+        <div class="strip-bars" id="evals" aria-label="Evaluations: pick one to watch"></div>
+        <div class="strip-axis"><span id="stripStart">0</span><span id="stripEnd"></span></div>
+      </div>
+    </section>
+
+    <section class="col" aria-label="Training curves">
+      <div id="mainCharts" class="curves"></div>
+      <details class="more-box">
+        <summary>More curves (losses, entropy, speed)</summary>
+        <div id="moreCharts" class="more"></div>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <span><b>Note F1</b>: each note struck on the right key within 100 ms; extra presses count as errors. This is how it sounds.</span>
+    <span><b>Per-step F1</b>: right keys down every 50 ms (RoboPianist's metric; doing nothing scores 0.17).</span>
+  </footer>
+</div>
+
+<div class="timeline" role="region" aria-label="Replay training">
+  <div class="timeline-inner">
+    <button class="tl-play" id="playBtn" type="button">▶ Replay</button>
+    <input type="range" id="cursor" min="0" max="1" value="1" step="1" aria-label="Training step">
+    <span class="tl-text num" id="cursorText"></span>
+    <button class="tl-latest" id="liveBtn" type="button">Latest</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(() => {
+  "use strict";
+  const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const REPLAY_WINDOW = [0, 12];  // seconds of each evaluation to play during replay
+  // What each training round changed (see docs/06_results.md).
+  const ROUNDS = {
+    1: "Shadow Hands on sliders",
+    2: "G1, joint control",
+    3: "G1, jitter fixes from a warm start",
+    4: "G1, hand-position (IK) control",
+    5: "G1, hands hovering above the keys",
+    6: "G1, finger-only pressing",
+    7: "G1, finger observations fixed",
+  };
+  // Rounds stopped on purpose before their step budget: [status label, short reason, full reason].
+  const STOPPED = {
+    1: ["solved", "stopped once solved", "Stopped at ~1.25M of 3M steps: every run had already learned the song."],
+    5: ["stopped", "stopped: whole-hand pressing", "Stopped at ~1M: the policy pressed keys with the whole hand. Round 6 changed the setup."],
+    6: ["stopped", "stopped: bug found", "Stopped at ~750k after finding the bug (the policy could not see its fingers). Round 7 fixed it."],
+  };
+  const noteName = m => NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1);
+  const $ = id => document.getElementById(id);
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const fmt = (v, d = 3) => (v == null || Number.isNaN(v)) ? "–" : Number(v).toFixed(d);
+  const fmtStep = s => s >= 1e6 ? +(s / 1e6).toFixed(2) + "M" : s >= 1e3 ? Math.round(s / 1e3) + "k" : String(s);
+  const roundOf = name => { const m = /^r(\d+)_/.exec(name); return m ? Number(m[1]) : 0; };
+  // Canvas needs a plain colour: #rrggbb + alpha byte.
+  const alpha = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, "0");
+
+  // Colour theme: Auto follows the system; Light/Dark set data-theme on the root, which the
+  // CSS tokens already handle. The choice is remembered in this browser only.
+  function applyTheme(choice) {
+    const root = document.documentElement;
+    if (choice === "light" || choice === "dark") root.setAttribute("data-theme", choice);
+    else root.removeAttribute("data-theme");
+    for (const b of document.querySelectorAll(".theme button")) b.setAttribute("aria-pressed", String(b.dataset.themeChoice === (choice || "system")));
+  }
+  let savedTheme = "system";
+  try { savedTheme = localStorage.getItem("runaway-theme") || "system"; } catch { /* storage blocked */ }
+  applyTheme(savedTheme);
+  for (const b of document.querySelectorAll(".theme button")) b.addEventListener("click", () => {
+    applyTheme(b.dataset.themeChoice);
+    try { localStorage.setItem("runaway-theme", b.dataset.themeChoice); } catch { /* storage blocked */ }
+  });
+
+  const state = { index: null, runs: {}, focus: null, hover: null, evalIdx: null, cursor: null, maxStep: 1, playing: false, charts: [], roll: null,
+                  openRounds: null, group: location.hash === "#hands" ? "hands" : "g1" };
+  // Runs of the robot currently shown (the tabs at the top switch between them).
+  const groupOf = r => (r.meta.settings.embodiment === "g1" ? "g1" : "hands");
+  const visibleRuns = () => Object.values(state.runs).filter(r => groupOf(r) === state.group);
+
+  // ------------------------------------------------------------------ loading
+  async function getJSON(url) {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error(url + " → " + r.status);
+    return r.json();
+  }
+  async function getJSONL(url) {
+    // A run whose file fails to load just shows no curves; the rest of the page still loads.
+    const r = await fetch(url, { cache: "no-store" }).catch(() => null);
+    if (!r || !r.ok) return [];
+    return (await r.text()).split("\n").filter(Boolean).flatMap(l => { try { return [JSON.parse(l)]; } catch { return []; } });
+  }
+
+  async function load() {
+    let index;
+    try { index = await getJSON("data/index.json"); }
+    catch { $("runs").innerHTML = '<div class="empty">No training data next to this page yet (data/index.json).</div>'; return; }
+    state.index = index;
+    await Promise.all(index.runs.map(async meta => {
+      const [metrics, evals] = await Promise.all([
+        getJSONL(`data/runs/${meta.name}/metrics.jsonl`),
+        getJSON(`data/runs/${meta.name}/evals.json`).catch(() => []),
+      ]);
+      state.runs[meta.name] = { meta, metrics, evals, rolls: state.runs[meta.name]?.rolls ?? null };
+    }));
+    if (!Object.values(state.runs).some(r => groupOf(r) === state.group)) state.group = "hands";
+    selectGroup(state.group, false);
+    renderHeader();
+  }
+
+  function selectGroup(group, userClick = true) {
+    if (userClick && group !== state.group) state.openRounds = null;
+    state.group = group;
+    for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-pressed", String(b.dataset.group === group));
+    const runs = visibleRuns();
+    state.maxStep = Math.max(1, ...runs.map(r => r.meta.total_steps));
+    if (userClick || !state.focus || !runs.some(r => r.meta.name === state.focus)) {
+      state.focus = bestRun(runs)?.meta.name ?? null;
+      state.cursor = null;
+      state.evalIdx = state.focus ? bestEval(state.runs[state.focus]) : null;
+    }
+    renderSummary(); renderRuns(); renderCharts(); renderFocus(); syncCursorInput();
+  }
+  for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { stopReplay(); selectGroup(b.dataset.group); });
+
+  const bestRun = runs => [...runs].sort((a, b) => (b.meta.best_note_f1 ?? 0) - (a.meta.best_note_f1 ?? 0))[0];
+  function focusRun(name) {
+    state.focus = name;
+    const run = state.runs[name];
+    state.evalIdx = state.cursor == null && run ? bestEval(run) : null;
+    renderRuns(); styleCharts(); renderFocus();
+  }
+
+  // ------------------------------------------------------------------ header, summary, runs
+  function renderHeader() {
+    const live = state.index.live;
+    $("modeDot").className = "dot " + (live ? "live" : "finished");
+    $("modeText").textContent = (live ? "Live · updated " : "Replay · data from ") +
+      new Date(state.index.generated_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  function renderSummary() {
+    const runs = visibleRuns(), best = bestRun(runs);
+    const box = $("summary");
+    if (!best) { box.innerHTML = ""; return; }
+    const m = best.meta;
+    const hours = runs.reduce((s, r) => s + (r.meta.hours || 0), 0);
+    const steps = runs.reduce((s, r) => s + (r.meta.step || 0), 0);
+    box.innerHTML = `
+      <button type="button" class="stat" id="bestStat" title="Show this run"><b>${fmt(m.best_note_f1, 3)}</b><small>best note F1 · ${m.name} at ${fmtStep(m.best_note_step ?? m.step)}</small></button>
+      <div class="stat"><b>${fmt(m.best_f1, 3)}</b><small>its best per-step F1</small></div>
+      <div class="stat"><b>${runs.length}</b><small>runs in ${new Set(runs.map(r => roundOf(r.meta.name))).size} rounds</small></div>
+      <div class="stat"><b>${fmtStep(steps)}</b><small>simulated steps · ${hours.toFixed(1)} GPU hours</small></div>`;
+    $("bestStat").addEventListener("click", () => { stopReplay(); state.cursor = null; syncCursorInput(); applyCursorToCharts(); focusRun(m.name); });
+  }
+
+  function tagsFor(s) {
+    const t = [];
+    if (s.embodiment === "g1") {
+      t.push(s.arm_control === "ik" ? "IK" : "joint");
+      if (s.extra_press_penalty) t.push("press penalty " + s.extra_press_penalty);
+      if (s.arm_action_smoothing) t.push("filter " + s.arm_action_smoothing);
+      if (s.arm_action_rate_penalty) t.push("rate penalty " + s.arm_action_rate_penalty);
+      if (s.warm_start) t.push("warm start");
+    }
+    if (s.midi && s.midi.includes("45")) t.push("45 s clip");
+    t.push("γ " + s.discount);
+    if (s.batch_size !== 256) t.push("batch " + s.batch_size);
+    t.push("seed " + s.seed);
+    return t.join(" · ");
+  }
+
+  function renderRuns() {
+    const box = $("runs");
+    const runs = visibleRuns();
+    if (!runs.length) { box.innerHTML = '<div class="empty">No runs yet. They appear here once training starts.</div>'; return; }
+    const byRound = new Map();
+    for (const r of runs) { const k = roundOf(r.meta.name); if (!byRound.has(k)) byRound.set(k, []); byRound.get(k).push(r); }
+    const rounds = [...byRound.keys()].sort((a, b) => b - a);
+    // Newest round and the focused run's round start open; the viewer's choices stick.
+    if (!state.openRounds) state.openRounds = new Set([rounds[0]]);
+    state.openRounds.add(roundOf(state.focus || ""));
+    box.innerHTML = "";
+    for (const k of rounds) {
+      const list = byRound.get(k).sort((a, b) => (b.meta.best_note_f1 ?? -1) - (a.meta.best_note_f1 ?? -1));
+      const det = document.createElement("details");
+      det.className = "round"; det.open = state.openRounds.has(k);
+      const label = (ROUNDS[k] || "").replace(state.group === "g1" ? /^G1, / : /^$/, "");
+      const stop = STOPPED[k];
+      det.innerHTML = `<summary${stop ? ` title="${stop[2]}"` : ""}><span class="round-name">${k ? "Round " + k : "Runs"}${label ? ` <span>· ${label}${stop ? " · " + stop[1] : ""}</span>` : ""}</span>
+        <span class="round-best">${list.length} runs · best <b>${fmt(list[0].meta.best_note_f1, 2)}</b></span></summary><div class="runs"></div>`;
+      det.addEventListener("toggle", () => { det.open ? state.openRounds.add(k) : state.openRounds.delete(k); });
+      const grid = det.querySelector(".runs");
+      for (const r of list) {
+        const m = r.meta;
+        const stop = m.status === "stopped early" && STOPPED[k];
+        const status = stop ? { label: stop[0], dot: stop[0] === "solved" ? "finished" : "halted", why: stop[2] } : { label: m.status, dot: m.status, why: "" };
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "run"; b.setAttribute("aria-pressed", String(m.name === state.focus));
+        b.innerHTML = `
+          <span class="run-name">${m.name}<small>${tagsFor(m.settings)}</small></span>
+          <span class="bar" title="${m.step.toLocaleString()} of ${m.total_steps.toLocaleString()} steps"><i style="width:${Math.min(100, 100 * m.step / m.total_steps)}%"></i></span>
+          <span class="state" title="${status.why}"><span class="dot ${status.dot}"></span>${status.label}</span>
+          <span class="f1" title="best note F1 (strikes on time, extra presses count against it); best per-step F1 below">${fmt(m.best_note_f1, 2)}<small>${fmt(m.best_f1, 2)}</small></span>`;
+        b.addEventListener("click", () => focusRun(m.name));
+        b.addEventListener("mouseenter", () => { state.hover = m.name; styleCharts(); });
+        b.addEventListener("mouseleave", () => { state.hover = null; styleCharts(); });
+        grid.appendChild(b);
+      }
+      box.appendChild(det);
+    }
+  }
+
+  // ------------------------------------------------------------------ charts
+  const CHARTS = [
+    { key: "note_f1", title: "Note F1", note: "each note struck on time; extra presses count against it", lead: true, source: "evals", min: 0, max: 1 },
+    { key: "eval/f1", title: "Per-step F1", note: "RoboPianist's metric", main: true, event: "eval", min: 0, max: 1 },
+    { key: "rollout/f1", title: "Practice F1", note: "with exploration noise", main: true, min: 0, max: 1 },
+    { key: "rollout/episode_return", title: "Reward per performance", main: true },
+    { key: "train/critic_loss", title: "Critic loss", log: true },
+    { key: "train/q_mean", title: "Q value" },
+    { key: "train/actor_loss", title: "Actor loss" },
+    { key: "train/entropy", title: "Policy entropy" },
+    { key: "train/temperature", title: "Temperature α", log: true },
+    { key: "steps_per_sec", title: "Simulation steps per second" },
+  ];
+
+  const cursorPlugin = {
+    id: "cursor",
+    afterDraw(chart) {
+      if (state.cursor == null) return;
+      const x = chart.scales.x.getPixelForValue(state.cursor);
+      const { top, bottom } = chart.chartArea, ctx = chart.ctx;
+      ctx.save(); ctx.strokeStyle = css("--muted"); ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke(); ctx.restore();
+    },
+  };
+
+  // Tooltips follow the focused (and hovered) run only, not the grey context lines.
+  if (window.Chart) {
+    Chart.Interaction.modes.focusRun = (chart, e) => {
+      const pos = Chart.helpers.getRelativePosition(e, chart), items = [];
+      chart.data.datasets.forEach((ds, i) => {
+        if (ds.label !== state.focus && ds.label !== state.hover) return;
+        let best = null, bd = Infinity;
+        chart.getDatasetMeta(i).data.forEach((el, j) => { const d = Math.abs(el.x - pos.x); if (d < bd) { bd = d; best = { element: el, datasetIndex: i, index: j }; } });
+        if (best) items.push(best);
+      });
+      return items;
+    };
+  }
+
+  const seriesFor = (run, spec) => (spec.source === "evals" ? run.evals : run.metrics)
+    .filter(m => (spec.source === "evals" || (spec.event ? m.event === spec.event : m.event === "train")) && Number.isFinite(m[spec.key]))
+    .map(m => ({ x: m.step, y: m[spec.key] }));
+
+  // Focused run in ink with a soft fill and a dot on its last point; hovered run in grey;
+  // every other run as a faint context line.
+  function styleDataset(ds, spec) {
+    const ink = css("--ink"), ghost = css("--ghost"), muted = css("--muted");
+    const focus = ds.label === state.focus, hover = ds.label === state.hover && !focus;
+    ds.borderColor = focus ? ink : hover ? muted : ghost;
+    ds.borderWidth = focus ? 1.75 : hover ? 1.5 : 1;
+    ds.order = focus ? 0 : hover ? 1 : 2;
+    ds.fill = focus && (spec.lead || spec.main) && !spec.log ? "origin" : false;
+    ds.backgroundColor = focus ? alpha(ink, 0.045) : "transparent";
+    ds.pointRadius = focus ? (ctx => ctx.dataIndex === ctx.dataset.data.length - 1 ? 3 : 0) : 0;
+    ds.pointBackgroundColor = ink; ds.pointBorderWidth = 0;
+    ds.pointHoverRadius = focus || hover ? 4 : 0;
+  }
+
+  function renderCharts() {
+    state.charts.forEach(c => c.chart.destroy()); state.charts = [];
+    $("mainCharts").innerHTML = ""; $("moreCharts").innerHTML = "";
+    if (!window.Chart) { $("mainCharts").innerHTML = '<div class="empty">The chart library could not load.</div>'; return; }
+    const line = css("--line"), faint = css("--faint");
+    Chart.defaults.font.family = css("--mono"); Chart.defaults.font.size = 10; Chart.defaults.color = faint;
+    const sub = document.createElement("div"); sub.className = "curves-sub";
+    for (const spec of CHARTS) {
+      const wrap = document.createElement("div");
+      wrap.className = "chart" + (spec.lead ? " lead" : "");
+      wrap.innerHTML = `<div class="chart-head"><h2>${spec.title}</h2>${spec.note ? `<small>${spec.note}</small>` : ""}</div><div class="box"><canvas></canvas></div>`;
+      if (spec.lead) $("mainCharts").appendChild(wrap);
+      else if (spec.main) sub.appendChild(wrap);
+      else $("moreCharts").appendChild(wrap);
+      const datasets = visibleRuns().map(r => {
+        const ds = { label: r.meta.name, data: seriesFor(r, spec), tension: 0.25, parsing: false, spanGaps: true };
+        styleDataset(ds, spec);
+        return ds;
+      });
+      const chart = new Chart(wrap.querySelector("canvas"), {
+        type: "line", data: { datasets }, plugins: [cursorPlugin],
+        options: {
+          animation: false, responsive: true, maintainAspectRatio: false,
+          interaction: { mode: "focusRun", intersect: false },
+          layout: { padding: { top: 4, right: 6 } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: css("--surface"), titleColor: css("--muted"), bodyColor: css("--ink"),
+              borderColor: line, borderWidth: 1, padding: 8, cornerRadius: 6, displayColors: false,
+              titleFont: { family: css("--mono"), size: 10 }, bodyFont: { family: css("--mono"), size: 11 },
+              callbacks: {
+                title: it => "step " + Number(it[0].parsed.x).toLocaleString(),
+                label: it => `${it.dataset.label}  ${Math.abs(it.parsed.y) >= 100 ? Math.round(it.parsed.y).toLocaleString() : Number(it.parsed.y).toPrecision(3)}`,
+              },
+            },
+          },
+          scales: {
+            x: { type: "linear", min: 0, max: state.maxStep, grid: { display: false }, border: { color: line },
+                 ticks: { callback: v => fmtStep(v), maxTicksLimit: 5, maxRotation: 0 } },
+            y: { type: spec.log ? "logarithmic" : "linear", min: spec.min, max: spec.max, grid: { color: line, drawTicks: false }, border: { display: false },
+                 ticks: { maxTicksLimit: spec.lead ? 5 : 3, padding: 6, callback: v => Math.abs(v) >= 1000 ? fmtStep(v) : +Number(v).toPrecision(2) } },
+          },
+        },
+      });
+      state.charts.push({ chart, spec });
+    }
+    $("mainCharts").appendChild(sub);
+    applyCursorToCharts();
+  }
+
+  function styleCharts() {
+    for (const { chart, spec } of state.charts) { chart.data.datasets.forEach(ds => styleDataset(ds, spec)); chart.update("none"); }
+  }
+
+  function applyCursorToCharts() {
+    const runs = visibleRuns();
+    for (const { chart, spec } of state.charts) {
+      chart.data.datasets.forEach((ds, i) => {
+        const full = seriesFor(runs[i], spec);
+        ds.data = state.cursor == null ? full : full.filter(p => p.x <= state.cursor);
+      });
+      chart.update("none");
+    }
+  }
+
+  // ------------------------------------------------------------------ performance
+  function bestEval(run) {
+    const ev = run.evals.filter(e => e.video || e.roll);
+    if (!ev.length) return null;
+    const top = Math.max(...ev.map(e => e.note_f1 ?? -1));
+    // Among equally good evaluations prefer one with a video.
+    const best = ev.filter(e => (e.note_f1 ?? -1) === top).sort((a, b) => !!b.video - !!a.video)[0];
+    return run.evals.indexOf(best);
+  }
+
+  function evalAtCursor(run) {
+    const ev = run.evals.filter(e => e.video || e.roll);
+    if (!ev.length) return null;
+    let best = ev[ev.length - 1];
+    if (state.cursor != null) { best = ev[0]; for (const e of ev) if (e.step <= state.cursor) best = e; }
+    return run.evals.indexOf(best);
+  }
+
+  function renderFocus() {
+    const run = state.runs[state.focus];
+    if (!run) return;
+    if (state.evalIdx == null) state.evalIdx = evalAtCursor(run);
+    const ev = run.evals[state.evalIdx];
+    $("perfTitle").textContent = run.meta.name;
+    $("perfStep").textContent = ev ? "after " + ev.step.toLocaleString() + " steps" : "";
+    const box = $("videoBox");
+    if (ev && ev.video) {
+      const src = `data/runs/${run.meta.name}/${ev.video}`;
+      let v = box.querySelector("video");
+      if (!v) { box.innerHTML = '<video id="video" controls playsinline preload="metadata"></video>'; v = box.querySelector("video"); }
+      if (!v.src.endsWith(src)) v.src = src;
+    } else {
+      box.innerHTML = `<div class="novideo">${ev ? "No video for this evaluation (only some are rendered). The piano roll below shows what it played." : "No evaluations yet."}</div>`;
+    }
+    $("scores").innerHTML = ev ? [["note F1", fmt(ev.note_f1)], ["key presses / notes", ev.presses != null ? `${ev.presses} / ${ev.strikes}` : "–"], ["per-step F1", fmt(ev.f1)]]
+      .map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join("") : "";
+    const evals = $("evals"); evals.innerHTML = "";
+    run.evals.forEach((e, i) => {
+      const b = document.createElement("button");
+      const score = Number.isFinite(e.note_f1) ? e.note_f1 : e.f1;
+      b.type = "button"; b.className = e.video ? "video" : ""; b.setAttribute("aria-pressed", String(i === state.evalIdx));
+      b.innerHTML = `<i style="height:${Math.max(2, 100 * (score || 0))}%"></i>`;
+      b.title = `${fmtStep(e.step)} steps · note F1 ${fmt(e.note_f1, 2)} · per-step F1 ${fmt(e.f1, 2)}${e.video ? " · video" : ""}`;
+      b.setAttribute("aria-label", b.title);
+      b.addEventListener("click", () => { stopReplay(); state.evalIdx = i; state.cursor = e.step; syncCursorInput(); applyCursorToCharts(); renderFocus(); });
+      evals.appendChild(b);
+    });
+    $("stripStart").textContent = run.evals.length ? fmtStep(run.evals[0].step) : "";
+    $("stripEnd").textContent = run.evals.length ? fmtStep(run.evals[run.evals.length - 1].step) : "";
+    loadRoll(run, ev);
+  }
+
+  async function loadRoll(run, ev) {
+    state.roll = null; drawRoll();
+    if (!ev || !ev.roll) return;
+    const want = run.meta.name + ev.roll;
+    try {
+      // All of a run's piano rolls live in one file, fetched once and kept.
+      run.rolls = run.rolls || await getJSON(`data/runs/${run.meta.name}/rolls.json`);
+      const data = run.rolls[ev.roll];
+      const cur = state.runs[state.focus], now = cur && cur.evals[state.evalIdx];
+      if (now && cur.meta.name + now.roll === want) { state.roll = data; drawRoll(); }
+    } catch { /* leave the roll empty */ }
+  }
+
+  function drawRoll() {
+    const c = $("roll"), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    ctx.font = `9px ${css("--mono")}`;
+    const roll = state.roll;
+    if (!roll) { ctx.fillStyle = css("--muted"); ctx.fillText("No piano roll for this evaluation yet.", 4, 16); return; }
+    const keys = [...roll.keys].sort((a, b) => b.midi - a.midi);
+    const gutter = 40, laneH = (h - 16) / keys.length, x = s => gutter + (w - gutter - 2) * s / roll.steps;
+    keys.forEach((k, i) => {
+      const y = i * laneH, black = [1, 3, 6, 8, 10].includes(k.midi % 12);
+      ctx.fillStyle = black ? css("--key-black") : css("--key-white"); ctx.fillRect(0, y + 0.5, gutter - 8, laneH - 1);
+      ctx.fillStyle = black ? css("--key-white") : css("--key-black"); ctx.fillText(noteName(k.midi), 4, y + laneH / 2 + 3.5);
+      ctx.fillStyle = css("--line"); ctx.fillRect(gutter, y + laneH - 0.5, w - gutter, 0.5);
+      const target = new Uint8Array(roll.steps + 1);
+      ctx.globalAlpha = 0.32; ctx.fillStyle = css("--target");
+      for (const [s, e] of k.target) { ctx.fillRect(x(s), y + 2, x(e) - x(s), laneH - 4); target.fill(1, s, e); }
+      ctx.globalAlpha = 1;
+      for (const [s, e] of k.played) {
+        for (let t = s; t < e;) {            // split each press into right / wrong stretches
+          const ok = target[t]; let u = t;
+          while (u < e && target[u] === ok) u++;
+          ctx.fillStyle = ok ? css("--played") : css("--wrong");
+          ctx.fillRect(x(t), y + laneH * 0.32, Math.max(1, x(u) - x(t)), laneH * 0.36);
+          t = u;
+        }
+      }
+    });
+    ctx.fillStyle = css("--faint");
+    for (let sec = 0; sec <= roll.steps * roll.dt; sec += 10) ctx.fillText(sec + "s", x(sec / roll.dt) + 2, h - 3);
+    const v = document.getElementById("video");
+    if (v && Number.isFinite(v.currentTime)) { ctx.fillStyle = css("--ink"); ctx.fillRect(x(v.currentTime / roll.dt) - 0.75, 0, 1.5, h - 14); }
+  }
+  window.addEventListener("resize", drawRoll);
+  (function frame() { const v = document.getElementById("video"); if (v && !v.paused) drawRoll(); requestAnimationFrame(frame); })();
+  // Redraw canvases and charts when the viewer's theme changes.
+  window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", () => { renderCharts(); drawRoll(); });
+  new MutationObserver(() => { renderCharts(); drawRoll(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ------------------------------------------------------------------ replay
+  function syncCursorInput() {
+    const inp = $("cursor"); inp.max = String(state.maxStep); inp.value = String(state.cursor ?? state.maxStep);
+    $("cursorText").textContent = state.cursor == null ? "latest" : "step " + fmtStep(state.cursor);
+  }
+  $("cursor").addEventListener("input", ev => {
+    stopReplay();
+    const v = Number(ev.target.value);
+    state.cursor = v >= state.maxStep ? null : v;
+    syncCursorInput(); applyCursorToCharts();
+    const run = state.runs[state.focus];
+    if (run) { const i = evalAtCursor(run); if (i !== state.evalIdx) { state.evalIdx = i; renderFocus(); } }
+  });
+  $("liveBtn").addEventListener("click", () => { stopReplay(); state.cursor = null; state.evalIdx = null; syncCursorInput(); applyCursorToCharts(); renderFocus(); });
+
+  // Replay: walk through the run's evaluations in order and play the same few seconds
+  // of the song from each one, so you hear the robot improve.
+  let timer = null;
+  function stopReplay() { state.playing = false; clearTimeout(timer); $("playBtn").textContent = "▶ Replay"; }
+  function replayFrom(i) {
+    const run = state.runs[state.focus];
+    if (!state.playing || !run || i >= run.evals.length) { stopReplay(); return; }
+    const e = run.evals[i];
+    state.evalIdx = i; state.cursor = e.step; syncCursorInput(); applyCursorToCharts(); renderFocus();
+    const v = document.getElementById("video"), [a, b] = REPLAY_WINDOW;
+    if (v && e.video) {
+      const go = () => { v.currentTime = a; v.play().catch(() => {}); };
+      if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true });
+      timer = setTimeout(() => { v.pause(); replayFrom(i + 1); }, (b - a) * 1000);
+    } else {
+      timer = setTimeout(() => replayFrom(i + 1), 800);
+    }
+  }
+  $("playBtn").addEventListener("click", () => {
+    if (state.playing) { stopReplay(); return; }
+    const run = state.runs[state.focus]; if (!run) return;
+    state.playing = true; $("playBtn").textContent = "❚❚ Pause";
+    replayFrom(state.cursor == null ? 0 : Math.max(0, run.evals.findIndex(e => e.step >= state.cursor)));
+  });
+
+  load().then(() => { if (state.index && state.index.live) setInterval(() => { if (!state.playing) load(); }, 30000); });
+})();
+</script>
+
+</body></html>
