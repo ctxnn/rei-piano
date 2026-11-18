@@ -169,11 +169,33 @@ process**. Ours:
 
 | Part | For the G1 humanoid |
 |---|---|
-| **State** $s_t$ (1,118 numbers) | **979** goal: which of the 88 keys (+ pedal) should be down now and at each of the next 10 steps (0.5 s look-ahead) · **89** piano: how far each key and the pedal are pressed · **42** finger joint angles (2 × 21) · **8** arm joint angles |
-| **Action** $a_t \in [-1,1]^d$ | $d = 41$ in IK mode: 34 finger joint targets + 6 wrist position targets + 1 sustain pedal. $d = 43$ in joint mode (8 arm joint targets instead of 6 wrist targets) |
-| **Dynamics** | targets go to position servos; MuJoCo simulates 10 physics steps of 5 ms per 50 ms control step. The agent never sees these equations |
-| **Reward** $r_t$ | below |
+| **State** $s_t$ | 1,118 numbers, broken down below |
+| **Action** $a_t \in [-1,1]^d$ | 41 numbers in IK mode (43 in joint mode), broken down below |
+| **Dynamics** | targets go to position servos; MuJoCo simulates 10 physics steps of 5 ms per 50 ms control step. The agent never sees these equations; it learns what its actions do by trying them |
+| **Reward** $r_t$ | [step 4](#4-the-reward) |
 | **Discount** $\gamma$ | 0.88 |
+
+**What the robot sees every 50 ms: 1,118 numbers**
+
+| Part | Count | Where the number comes from | Meaning |
+|---|---:|---|---|
+| Goal (piano roll) | **979** | 11 time steps × 89 (88 keys + sustain pedal) | which keys should be down now and at each of the next 10 steps (0.5 s look-ahead, like reading sheet music ahead) |
+| Piano state | **89** | 88 keys + 1 pedal | how far each key is pressed (0 to 1) and the pedal state |
+| Finger joint angles | **42** | 2 hands × 21 joints | where its own fingers are (the numbers missing in rounds 2–6, see [step 9](#9-the-bug-that-cost-five-rounds)) |
+| Arm joint angles | **8** | 2 arms × (3 shoulder + 1 elbow) | where its arms are |
+| **Total** | **1,118** | 979 + 89 + 42 + 8 | |
+
+**What the robot outputs every 50 ms: 41 numbers (IK mode)**
+
+| Part | Count | Where the number comes from |
+|---|---:|---|
+| Finger joint targets | **34** | 2 hands × 17 (RoboPianist's reduced action space) |
+| Wrist position targets | **6** | 2 wrists × (x, y, z); inverse kinematics turns them into arm joint angles |
+| Sustain pedal | **1** | |
+| **Total** | **41** | 34 + 6 + 1. In joint mode, 8 arm joint targets replace the 6 wrist targets: 34 + 8 + 1 = **43** |
+
+Each action number is in $[-1, 1]$ and is scaled to that joint's range. One performance is
+$T = 1{,}209$ control steps (1 s lead-in + 60.4 s of music), and the policy maximises
 
 ```math
 J(\pi) = \mathbb{E}_{\pi}\Big[\sum_{t=0}^{T-1} \gamma^t\, r(s_t, a_t)\Big], \qquad T = 1{,}209 \text{ steps}.
