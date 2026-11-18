@@ -268,7 +268,7 @@ Note F1 matched what we heard, and we now select checkpoints with it.
 ### 6. The learner: Soft Actor-Critic
 
 ```mermaid
-flowchart LR
+flowchart TB
     S["20 simulators<br/>(CPU)"] -- "store (s, a, r, s′)" --> B["Replay buffer<br/>1M transitions"]
     B -- "random batch of 256" --> C["2 critics Q₁, Q₂"]
     B -- "random batch of 256" --> A["Actor π"]
@@ -290,8 +290,11 @@ J_{\text{SAC}}(\pi) = \mathbb{E}\Big[\sum_t \gamma^t \big(r_t + \alpha\,\mathcal
 outputs a mean $\mu$ and a spread $\sigma$; the action is sampled and squashed into $[-1, 1]$:
 
 ```math
-u = \mu_\theta(s) + \sigma_\theta(s)\,\varepsilon,\quad \varepsilon \sim \mathcal{N}(0, I), \qquad a = \tanh(u),
-\qquad \log \pi(a \mid s) = \sum_i \Big[\log \mathcal{N}(u_i;\, \mu_i, \sigma_i) - \log\big(1 - \tanh^2 u_i\big)\Big].
+u = \mu_\theta(s) + \sigma_\theta(s)\,\varepsilon,\quad \varepsilon \sim \mathcal{N}(0, I), \qquad a = \tanh(u)
+```
+
+```math
+\log \pi(a \mid s) = \sum_i \Big[\log \mathcal{N}(u_i;\, \mu_i, \sigma_i) - \log\big(1 - \tanh^2 u_i\big)\Big]
 ```
 
 Because the randomness sits in $\varepsilon$ (the *reparameterisation trick*), the action is
@@ -302,8 +305,11 @@ At evaluation the noise is switched off: $a = \tanh(\mu)$.
 slowly updated target critics (which counters Q overestimation):
 
 ```math
-y = r + \gamma \Big(\min_{i=1,2} Q_{\bar\phi_i}(s', a') - \alpha \log \pi_\theta(a' \mid s')\Big),\qquad a' \sim \pi_\theta(\cdot \mid s'),
-\qquad \mathcal{L}_Q = \mathbb{E}\big[(Q_{\phi_i}(s,a) - y)^2\big],
+y = r + \gamma \Big(\min_{i=1,2} Q_{\bar\phi_i}(s', a') - \alpha \log \pi_\theta(a' \mid s')\Big),\qquad a' \sim \pi_\theta(\cdot \mid s')
+```
+
+```math
+\mathcal{L}_Q = \mathbb{E}\big[(Q_{\phi_i}(s,a) - y)^2\big],
 ```
 
 and the targets follow the critics slowly: $\bar\phi \leftarrow 0.995\,\bar\phi + 0.005\,\phi$.
@@ -313,8 +319,10 @@ one gradient update per environment step stable.
 **Actor and temperature updates.**
 
 ```math
-\mathcal{L}_\pi = \mathbb{E}\Big[\alpha \log \pi(a \mid s) - \tfrac12\big(Q_1(s,a) + Q_2(s,a)\big)\Big],
-\qquad
+\mathcal{L}_\pi = \mathbb{E}\Big[\alpha \log \pi(a \mid s) - \tfrac12\big(Q_1(s,a) + Q_2(s,a)\big)\Big]
+```
+
+```math
 \mathcal{L}(\alpha) = \alpha\,\big(\mathcal{H}_{\text{current}} - \mathcal{H}_{\text{target}}\big),\quad \mathcal{H}_{\text{target}} = -\tfrac12 \cdot 41 .
 ```
 
